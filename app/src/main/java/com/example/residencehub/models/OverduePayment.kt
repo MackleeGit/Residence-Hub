@@ -3,10 +3,12 @@ package com.example.residencehub.models
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class OverduePayment(
-    val ovdpaymentid: Int,
-    val overduepayid: Int,
-    val tenantid: Int,
-    val amountpaid: Double,
-    val paymentdate: String
+data class OverduePaymentRecord(
+    val ovdPaymentId: Int,
+    val overduePayId: Int,
+    val tenantId: Int,
+    val amountPaid: Double,
+    val paymentDate: String,
+    val paymentMethod: String = "Cash",
+    val referenceNumber: String? = null
 )

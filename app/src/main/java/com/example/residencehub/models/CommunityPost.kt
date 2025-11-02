@@ -4,11 +4,13 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class CommunityPost(
-    val postid: Int,
-    val tenantid: Int,
+    val postId: Int,
+    val tenantId: Int,
     val title: String,
     val content: String,
-    val date_posted: String,
+    val datePosted: String,
     val likes: Int = 0,
-    val comment_count: Int = 0
+    val commentCount: Int = 0,
+    val authorName: String? = null,
+    val attachmentUrl: String? = null
 )

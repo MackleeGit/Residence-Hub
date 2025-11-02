@@ -4,8 +4,11 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class StandardPayment(
-    val paymentid: Int,
-    val tenantid: Int,
-    val amountpaid: Double,
-    val paymentdate: String
+    val paymentId: Int,
+    val tenantId: Int,
+    val currentMonthDueId: Int,
+    val amountPaid: Double,
+    val paymentDate: String,
+    val paymentMethod: String = "Cash",
+    val referenceNumber: String? = null
 )
