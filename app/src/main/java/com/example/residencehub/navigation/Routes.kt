@@ -1,9 +1,13 @@
-package com.example.pomodoroproject.navigation
+package com.example.residencehub.navigation
 
-const val REGISTER_URL = "register"
-const val LOGIN_URL= "login"
-const val SESSION_PAGE_URL = "session"
-const val DASHBOARD_URL = "dashboard"
-const val VIEW_SESSIONS_URL = "view_sessions"
-const val SESSION_INFO_SCREEN_URL = "session_info"
+/**
+ * Defines all navigation constants for the ResidenceHub application.
+ * Using a simple object for easy access throughout the project.
+ */
+object AppRoutes {
+    const val LOGIN = "login"
+    const val DASHBOARD = "dashboard"
 
+    // Add other main routes here as the project grows
+    // const val PROFILE = "profile_screen"
+}
