@@ -1,41 +1,59 @@
 package com.example.residencehub.repositories
 
-import com.residencehub.data.remote.SupabaseClientProvider
-import io.github.jan.supabase.gotrue.gotrue
-import io.github.jan.supabase.gotrue.user.UserSession
-import io.github.jan.supabase.gotrue.user.UserInfo
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.user.UserSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class AuthRepository {
+class AuthRepository(private val supabase: SupabaseClient) {
 
-    private val supabase = SupabaseClientProvider.client
 
-    suspend fun signUp(email: String, password: String): UserSession? = withContext(Dispatchers.IO) {
-        val session = supabase.gotrue.signUpWith(
-            io.github.jan.supabase.gotrue.providers.Email,
-        ) {
-            this.email = email
-            this.password = password
+    suspend fun login(email: String, password: String): UserSession? = withContext(Dispatchers.IO) {
+        try {
+            val result = supabase.auth.signInWith(Email) {
+                this.email = email
+                this.password = password
+            }
+
+            result.userSession
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
-        session
     }
 
-    suspend fun signIn(email: String, password: String): UserSession? = withContext(Dispatchers.IO) {
-        val session = supabase.gotrue.signInWith(
-            io.github.jan.supabase.gotrue.providers.Email,
-        ) {
-            this.email = email
-            this.password = password
+    // Register a new user
+    suspend fun register(email: String, password: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            supabase.auth.signUpWith(Email) {
+                this.email = email
+                this.password = password
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
-        session
     }
 
-    suspend fun getCurrentUser(): UserInfo? = withContext(Dispatchers.IO) {
-        supabase.gotrue.retrieveUserForCurrentSession()
+    // Get current session (already logged in)
+    suspend fun getSession(): UserSession? = withContext(Dispatchers.IO) {
+        try {
+            supabase.auth.currentSessionOrNull() // this is the correct method
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 
-    suspend fun signOut() = withContext(Dispatchers.IO) {
-        supabase.gotrue.logout()
+    // Logout
+    suspend fun logout() = withContext(Dispatchers.IO) {
+        try {
+            supabase.auth.signOut()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
