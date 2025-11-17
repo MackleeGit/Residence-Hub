@@ -1,89 +1,106 @@
-package com.example.pomodoroproject.navigation
+package com.example.pomodoroproject.viewmodels
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import android.app.ProgressDialog
+import android.content.Context
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
-import androidx.navigation.compose.rememberNavController
-import com.example.pomodoroproject.viewmodels.SessionViewModel
-import com.example.pomodoroproject.screens.DashboardScreen
-import com.example.pomodoroproject.screens.LoginScreen
-import com.example.pomodoroproject.screens.RegisterScreen
-import com.example.pomodoroproject.screens.SessionInfoScreen
-import com.example.pomodoroproject.screens.SessionScreen
-import com.example.pomodoroproject.screens.ViewSessionsScreen
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.ui.platform.LocalContext
-import android.app.Application
-import com.example.pomodoroproject.viewmodels.SessionViewModelFactory
+import com.example.pomodoroproject.models.Session
+import com.example.pomodoroproject.navigation.LOGIN_URL
+import com.google.firebase.database.FirebaseDatabase
+import android.widget.Toast
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
-@Composable
-fun AppNavHost(
-    modifier: Modifier = Modifier,
-    navHostController: NavHostController = rememberNavController(),
-    startDestination: String = "login"
+class SessionRepository(
+    navHostController: NavHostController,
+    private val context: Context
 ) {
-    NavHost(
-        navController = navHostController,
-        startDestination = startDestination,
-        modifier = modifier
-    ) {
-        composable("login") {
-            LoginScreen(navHostController)
-        }
-        composable("register") {
-            RegisterScreen(navHostController)
-        }
-        composable(
-            "start_session/{sessionId}/{sessionName}/{userId}/{pomo}/{short}/{long}",
-            arguments = listOf(
-                navArgument("sessionId") { type = NavType.StringType },
-                navArgument("sessionName") { type = NavType.StringType },
-                navArgument("userId") { type = NavType.StringType },
-                navArgument("pomo") { type = NavType.IntType },
-                navArgument("short") { type = NavType.IntType },
-                navArgument("long") { type = NavType.IntType }
-            )
-        ) { backStackEntry ->
-            val sessionId = backStackEntry.arguments?.getString("sessionId") ?: ""
-            val sessionName = backStackEntry.arguments?.getString("sessionName") ?: ""
-            val userId = backStackEntry.arguments?.getString("userId") ?: ""
-            val pomo = backStackEntry.arguments?.getInt("pomo") ?: 25
-            val short = backStackEntry.arguments?.getInt("short") ?: 5
-            val long = backStackEntry.arguments?.getInt("long") ?: 15
+    private val authRepository = AuthRepository(navHostController, context)
+    private val progress = ProgressDialog(context).apply {
+        setTitle("Loading")
+        setMessage("Please wait...")
+    }
 
-            val context = LocalContext.current
-            val application = context.applicationContext as Application
-            val viewModel: SessionViewModel = viewModel(
-                factory = SessionViewModelFactory(application)
-            )
+    init {
+        if (!authRepository.isLoggedIn()) {
+            navHostController.navigate(LOGIN_URL)
+        }
+    }
 
 
 
-            SessionScreen(
-                navHostController = navHostController,
-                sessionId = sessionId,
-                sessionName = sessionName,
-                userId = userId,
-                pomo = pomo,
-                short = short,
-                long = long,
-                viewModel = viewModel
-            )
-        }
-        composable("view_sessions") {
-            ViewSessionsScreen(navHostController)
-        }
-        composable("dashboard") {
-            DashboardScreen(navHostController)
-        }
-        composable("session_info/{sessionId}") { backStackEntry ->
-            val sessionId = backStackEntry.arguments?.getString("sessionId") ?: ""
-            SessionInfoScreen(sessionId = sessionId, navHostController = navHostController)
+
+    fun SaveSession(session: Session?) {
+        progress.show()
+
+        if (session == null || session.userID.isBlank()) {
+
+            progress.dismiss()
+            Toast.makeText(context, "Invalid session or missing user ID", Toast.LENGTH_SHORT).show()
+            return
         }
 
+        val ref = FirebaseDatabase.getInstance().getReference("Sessions").child(session.userID) // store sessions *under* the userID
+
+
+        val sessionData = mapOf(
+            "id" to session.id,
+            "name" to session.name,
+            "date" to session.date,
+            "userID" to session.userID,
+            "pomodoroTime" to session.pomodoroTime,
+            "shortBreakTime" to session.shortBreakTime,
+            "longBreakTime" to session.longBreakTime,
+            "completedPomodoros" to session.completedPomodoros,
+            "shortBreaks" to session.shortBreaks,
+            "longBreaks" to session.longBreaks,
+            "totalDuration" to session.totalDuration,
+            "workingTime" to session.workingtime,
+            "activity" to session.activity
+        )
+
+        ref.child(session.id).setValue(sessionData)
+            .addOnSuccessListener {
+                progress.dismiss()
+                Toast.makeText(context, "Session saved", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener {
+                progress.dismiss()
+
+                Toast.makeText(context, "Failed to save session: ${it.message}", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+
+    fun getUserSessions(userId: String, onResult: (List<Session>) -> Unit) {
+        progress.show()
+        val dbRef = FirebaseDatabase.getInstance()
+            .getReference("Sessions")
+            .child(userId)
+
+        dbRef.get()
+            .addOnSuccessListener {
+
+                snapshot ->
+                val sessions = mutableListOf<Session>()
+                for (child in snapshot.children) {
+                    val session = child.getValue(Session::class.java)
+                    if (session != null) {
+                        sessions.add(session)
+                    }
+                }
+                onResult(sessions)
+                progress.dismiss()
+            }
+            .addOnFailureListener {
+                onResult(emptyList()) // handle errors gracefully
+                progress.dismiss()
+            }
     }
 }
+
+
+
